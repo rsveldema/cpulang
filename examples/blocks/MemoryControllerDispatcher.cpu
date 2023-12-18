@@ -1,0 +1,173 @@
+#include <cpp.hpp>
+
+#include <MemoryControllerSingle.cpu>
+
+active_component MemoryControllerDispatcher
+{
+    enum memory_controller_dispatcher_t
+    {
+        IDLE,
+        ACTIVE_A_READ,
+        ACTIVE_B_READ,
+        ACTIVE_A_WRITE,
+        ACTIVE_B_WRITE,
+    };
+
+    memory_controller_dispatcher_t m_state = memory_controller_dispatcher_t::IDLE;
+
+    wire<bool> DRAM_A_cmd_set;
+    wire<DRAM_command_type> DRAM_A_cmd_type;
+    wire<uint64_t> DRAM_A_cmd_addr;
+    wire<bool> DRAM_A_cmd_done;
+    wire<uint32_t> DRAM_A_cmd_value;
+
+    wire<bool> DRAM_B_cmd_set;
+    wire<DRAM_command_type> DRAM_B_cmd_type;
+    wire<uint64_t> DRAM_B_cmd_addr;
+    wire<bool> DRAM_B_cmd_done;
+    wire<uint32_t> DRAM_B_cmd_value;
+
+    MemoryControllerSingle DRAM_A {DRAM_A_cmd_type, DRAM_A_cmd_set, DRAM_A_cmd_addr, DRAM_A_cmd_done, DRAM_A_cmd_value};
+    MemoryControllerSingle DRAM_B {DRAM_B_cmd_type, DRAM_B_cmd_set, DRAM_B_cmd_addr, DRAM_B_cmd_done, DRAM_B_cmd_value};
+
+    in_buffer<bool> m_command_set;
+    in_buffer<DRAM_command_type> m_command_type;
+    in_buffer<uint64_t> m_command_address;
+
+    out_buffer<bool> m_command_done;
+    inout_buffer<MemoryPacket> m_command_rw;
+
+    MemoryControllerDispatcher(
+        wire<bool> & command_set,
+        wire<DRAM_command_type> & command_type,
+        wire<uint64_t> & command_address,
+
+        wire<bool> & command_done,
+        wire<MemoryPacket> & command_rw)
+        : m_command_set(command_set),
+          m_command_type(command_type),
+          m_command_address(command_address),
+          m_command_done(command_done),
+          m_command_rw(command_rw)
+    {
+    }
+
+    void tick()
+    {
+        switch (m_state)
+        {
+        case memory_controller_dispatcher_t::IDLE:
+            check_for_new_command();
+            break;
+        case memory_controller_dispatcher_t::ACTIVE_A_READ:
+            check_for_read_completion_A();
+            break;
+        case memory_controller_dispatcher_t::ACTIVE_B_READ:
+            check_for_read_completion_B();
+            break;
+        case memory_controller_dispatcher_t::ACTIVE_A_WRITE:
+            check_for_write_completion_A();
+            break;
+        case memory_controller_dispatcher_t::ACTIVE_B_WRITE:
+            check_for_write_completion_B();
+            break;
+        }
+    }
+
+    void check_for_read_completion_A()
+    {
+        const auto ret = DRAM_A.check_read_finished();
+        if (ret.available)
+        {
+            m_state = memory_controller_dispatcher_t::IDLE;
+            m_command_rw.push(ret.m_value);
+            m_command_done.push(true);
+        }
+    }
+
+    void check_for_read_completion_B()
+    {
+        const auto ret = DRAM_B.check_read_finished();
+        if (ret.available)
+        {
+            m_state = memory_controller_dispatcher_t::IDLE;
+            m_command_rw.push(ret.m_value);
+            m_command_done.push(true);
+        }
+    }
+
+    void check_for_write_completion_A()
+    {
+        if (DRAM_A.check_write_finished())
+        {
+            m_state = memory_controller_dispatcher_t::IDLE;
+            m_command_done.push(true);
+        }
+    }
+
+    void check_for_write_completion_B()
+    {
+        if (DRAM_B.check_write_finished())
+        {
+            m_state = memory_controller_dispatcher_t::IDLE;
+            m_command_done.push(true);
+        }
+    }
+
+    void check_for_new_command()
+    {
+        if (!m_command_set.value())
+        {
+            return;
+        }
+
+        uint64_t address = m_command_address.value();
+
+        switch (m_command_type.value())
+        {
+        case DRAM_command_type::READ32:
+        {
+            if (is_for_A(address))
+            {
+                if (DRAM_A.try_request_read(m_command_address.value()))
+                {
+                    m_state = memory_controller_dispatcher_t::ACTIVE_A_READ;
+                }
+            }
+            else
+            {
+                if (DRAM_B.try_request_read(m_command_address.value()))
+                {
+                    m_state = memory_controller_dispatcher_t::ACTIVE_B_READ;
+                }
+            }
+            break;
+        }
+
+        case DRAM_command_type::WRITE32:
+        {
+            if (is_for_A(address))
+            {
+                if (DRAM_A.try_request_write(m_command_address.value(), m_command_rw.value()))
+                {
+                    m_state = memory_controller_dispatcher_t::ACTIVE_A_WRITE;
+                }
+            }
+            else
+            {
+                if (DRAM_B.try_request_write(m_command_address.value(), m_command_rw.value()))
+                {
+                    m_state = memory_controller_dispatcher_t::ACTIVE_B_WRITE;
+                }
+            }
+            break;
+        }
+        }
+    }
+
+    bool is_for_A(uint64_t v) const
+    {
+        uint32_t page = v >> PAGE_SIZE_SHIFT;
+        return page & 1;
+    }
+};

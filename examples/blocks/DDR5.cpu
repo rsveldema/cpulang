@@ -30,6 +30,19 @@ active_component DRAM_channel
 
     uint32_t storage[1024 * 1024];
 
+    DRAM_channel(wire<bool> & cmd_set,
+                 wire<DRAM_command_type> & cmd_type,
+                 wire<uint64_t>& cmd_addr,
+                 wire<bool>& cmd_done,
+                 wire<uint32_t>& cmd_value)
+        : command_set(cmd_set),
+          command_type(cmd_type),
+          command_address(cmd_addr),
+          command_done(cmd_done),
+          command_value(cmd_value)
+    {
+    }
+
     void tick()
     {
         switch (state)
@@ -104,4 +117,3 @@ active_component DRAM_channel
         state = DRAM_state::STREAM_WRITE;
     }
 };
-

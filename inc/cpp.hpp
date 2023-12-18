@@ -38,10 +38,12 @@ template <typename T>
 class in_buffer
 {
 public:
-    T value() const { return w.value(); }
+    in_buffer(wire<T>& w) : m_w(w) {}
+
+    T value() const { return m_w.value(); }
 
 private:
-    wire<T>& w;
+    wire<T>& m_w;
 };
 
 
@@ -50,10 +52,12 @@ template <typename T>
 class out_buffer
 {
 public:
-    void push(const T& v) { w.push(v); }
+    out_buffer(wire<T>& w) : m_w(w) {}
+
+    void push(const T& v) { m_w.push(v); }
 
 private:
-    wire<T>& w;
+    wire<T>& m_w;
 };
 
 
@@ -63,12 +67,14 @@ template <typename T>
 class inout_buffer
 {
 public:
-    void push(const T& v) {w.push(v); }
+    inout_buffer(wire<T>& w) : m_w(w) {}
 
-    T value() const { return w.value(); }
+    void push(const T& v) { m_w.push(v); }
+
+    T value() const { return m_w.value(); }
 
 private:
-    wire<T>& w;
+    wire<T>& m_w;
 };
 
 
