@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/rove/Projects/cpu-lang/build",
+  "command": "/usr/bin/g++ -I/home/rove/Projects/cpu-lang/examples/blocks -I/home/rove/Projects/cpu-lang/inc -g -std=gnu++20 -o CMakeFiles/tester.dir/test.cpp.o -c /home/rove/Projects/cpu-lang/test.cpp",
+  "file": "/home/rove/Projects/cpu-lang/test.cpp",
+  "output": "CMakeFiles/tester.dir/test.cpp.o"
+}
+]

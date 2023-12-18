@@ -1,0 +1,107 @@
+#include "cpp.hpp"
+
+constexpr uint32_t DRAM_STREAM_SIZE = 8;
+
+enum DRAM_command_type
+{
+    READ32,
+    WRITE32
+};
+
+active_component DRAM_channel
+{
+    enum DRAM_state
+    {
+        IDLE,
+        STREAM_READ,
+        STREAM_WRITE
+    };
+
+    DRAM_state state;
+    uint64_t address;
+    uint32_t stream_count;
+
+    in_buffer<bool> command_set;
+    in_buffer<DRAM_command_type> command_type;
+    in_buffer<uint64_t> command_address;
+
+    out_buffer<bool> command_done;
+    inout_buffer<uint32_t> command_value;
+
+    uint32_t storage[1024 * 1024];
+
+    void tick()
+    {
+        switch (state)
+        {
+        case DRAM_state::IDLE:
+            check_for_new_command();
+            break;
+        case DRAM_state::STREAM_READ:
+            process_read_stream();
+            break;
+        case DRAM_state::STREAM_WRITE:
+            process_write_stream();
+            break;
+        }
+    }
+
+    void process_read_stream()
+    {
+        uint32_t value = storage[address];
+        address++;
+        command_value.push(value);
+
+        if (stream_count == DRAM_STREAM_SIZE)
+        {
+            state = DRAM_state::IDLE;
+            command_done.push(true);
+        }
+    }
+
+    void process_write_stream()
+    {
+        uint32_t value = command_value.value();
+        storage[address] = value;
+        address++;
+
+        if (stream_count == DRAM_STREAM_SIZE)
+        {
+            state = DRAM_state::IDLE;
+            command_done.push(true);
+        }
+    }
+
+    void check_for_new_command()
+    {
+        if (!command_set.value())
+        {
+            return;
+        }
+        switch (command_type.value())
+        {
+        case DRAM_command_type::READ32:
+            start_read_streaming();
+            break;
+
+        case DRAM_command_type::WRITE32:
+            start_write_streaming();
+            break;
+        }
+    }
+
+    void start_read_streaming()
+    {
+        address = command_address.value();
+        stream_count = 0;
+        state = DRAM_state::STREAM_READ;
+    }
+
+    void start_write_streaming()
+    {
+        address = command_address.value();
+        stream_count = 0;
+        state = DRAM_state::STREAM_WRITE;
+    }
+};
+

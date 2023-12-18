@@ -1,0 +1,3 @@
+/home/rove/Projects/cpu-lang/build/CMakeFiles/tester.dir
+/home/rove/Projects/cpu-lang/build/CMakeFiles/edit_cache.dir
+/home/rove/Projects/cpu-lang/build/CMakeFiles/rebuild_cache.dir
