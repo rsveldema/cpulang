@@ -175,6 +175,6 @@ ACTIVE_COMPONENT(MemoryControllerDispatcher)
     bool is_for_A(uint64_t v) const
     {
         uint32_t page = v >> PAGE_SIZE_SHIFT;
-        return page & 1;
+        return page & 1 == 0;
     }
 };
