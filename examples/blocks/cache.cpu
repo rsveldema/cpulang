@@ -1,8 +1,0 @@
-#include <cpp.hpp>
-
-active_component L1_insn_cache{
-    void tick(){
-
-    }};
-
-active_component L1_data_cache{};

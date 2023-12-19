@@ -1,0 +1,134 @@
+#pragma once
+
+#include "DDR5.cpu"
+#include <cpp.hpp>
+
+entity MemoryPacket { uint32_t data[DRAM_STREAM_SIZE]; };
+
+passive_component MemoryControllerSingle
+{
+  enum memory_controller_state_t
+  {
+    IDLE,
+    READ32_IN_PROGRESS,
+    WRITE32_IN_PROGRESS
+  };
+
+  memory_controller_state_t m_state = memory_controller_state_t::IDLE;
+  uint32_t                  m_pkt_index;
+  MemoryPacket              m_pkt;
+
+  out_buffer<DRAM_command_type> m_command_type;
+  out_buffer<bool>              m_command_set;
+  out_buffer<uint64_t>          m_command_address;
+  in_buffer<bool>               m_DRAM_command_done;
+  inout_buffer<uint32_t>        m_DRAM_command_value;
+
+  MemoryControllerSingle(Wire<DRAM_command_type> & command_type,
+                         Wire<bool> & command_set,
+                         Wire<uint64_t> & command_address,
+                         Wire<bool> & DRAM_command_done,
+                         Wire<uint32_t> & DRAM_command_value)
+      : m_command_type(command_type), m_command_set(command_set),
+        m_command_address(command_address),
+        m_DRAM_command_done(DRAM_command_done),
+        m_DRAM_command_value(DRAM_command_value)
+  {
+  }
+
+  void set_idle_cmd()
+  {
+    m_command_type.push(DRAM_command_type::DES);
+    m_command_set.push(true);
+  }
+
+  optional<MemoryPacket> check_read_finished()
+  {
+    switch (m_state)
+      {
+      default:
+        assert(false);
+        break;
+
+        case memory_controller_state_t::READ32_IN_PROGRESS: {
+          if (m_DRAM_command_done.value())
+            {
+              if (m_pkt_index == DRAM_STREAM_SIZE)
+                {
+                  m_state = memory_controller_state_t::IDLE;
+                  return m_pkt;
+                }
+
+              uint32_t value          = m_DRAM_command_value.value();
+              m_pkt.data[m_pkt_index] = value;
+              m_pkt_index++;
+            }
+            break;
+        }
+      }
+    return optional<MemoryPacket>();
+  }
+
+  bool check_write_finished()
+  {
+    switch (m_state)
+      {
+      default:
+        assert(false);
+        break;
+
+        case memory_controller_state_t::WRITE32_IN_PROGRESS: {
+          if (m_DRAM_command_done.value())
+            {
+              if (m_pkt_index == DRAM_STREAM_SIZE)
+                {
+                  m_state = memory_controller_state_t::IDLE;
+                  return true;
+                }
+
+              uint32_t value = m_pkt.data[m_pkt_index];
+              m_pkt_index++;
+              m_DRAM_command_value.push(value);
+            }
+        }
+      }
+    return false;
+  }
+
+  bool try_request_read(uint64_t address)
+  {
+    if (m_state != memory_controller_state_t::IDLE)
+      {
+        // need to wait for the DRAM module to be idle
+        return false;
+      }
+
+    m_command_type.push(DRAM_command_type::READ32);
+    m_command_address.push(address);
+    m_command_set.push(true);
+
+    m_pkt_index = 0;
+
+    m_state = memory_controller_state_t::READ32_IN_PROGRESS;
+    return true;
+  }
+
+  bool try_request_write(uint64_t address, MemoryPacket value)
+  {
+    if (m_state != memory_controller_state_t::IDLE)
+      {
+        // need to wait for the DRAM module to be idle
+        return false;
+      }
+
+    m_pkt       = value;
+    m_pkt_index = 0;
+
+    m_command_type.push(DRAM_command_type::WRITE32);
+    m_command_address.push(address);
+    m_command_set.push(true);
+
+    m_state = memory_controller_state_t::WRITE32_IN_PROGRESS;
+    return true;
+  }
+};

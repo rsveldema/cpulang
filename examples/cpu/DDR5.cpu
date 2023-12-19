@@ -1,14 +1,19 @@
+#pragma once
+
 #include "cpp.hpp"
+
+#include "DDR5.cpu"
 
 constexpr uint32_t DRAM_STREAM_SIZE = 8;
 
 enum DRAM_command_type
 {
+    DES,
     READ32,
     WRITE32
 };
 
-active_component DRAM_channel
+ACTIVE_COMPONENT(DRAM_channel)
 {
     enum DRAM_state
     {
@@ -21,20 +26,22 @@ active_component DRAM_channel
     uint64_t address;
     uint32_t stream_count;
 
+
     in_buffer<bool> command_set;
     in_buffer<DRAM_command_type> command_type;
     in_buffer<uint64_t> command_address;
 
     out_buffer<bool> command_done;
+    // the value read / write
     inout_buffer<uint32_t> command_value;
 
     uint32_t storage[1024 * 1024];
 
-    DRAM_channel(wire<bool> & cmd_set,
-                 wire<DRAM_command_type> & cmd_type,
-                 wire<uint64_t>& cmd_addr,
-                 wire<bool>& cmd_done,
-                 wire<uint32_t>& cmd_value)
+    DRAM_channel(Wire<bool> & cmd_set,
+                 Wire<DRAM_command_type> & cmd_type,
+                 Wire<uint64_t>& cmd_addr,
+                 Wire<bool>& cmd_done,
+                 Wire<uint32_t>& cmd_value)
         : command_set(cmd_set),
           command_type(cmd_type),
           command_address(cmd_addr),
@@ -64,12 +71,14 @@ active_component DRAM_channel
         uint32_t value = storage[address];
         address++;
         command_value.push(value);
+        printf("DDR4-push: %d\n", value);
 
+        stream_count++;
         if (stream_count == DRAM_STREAM_SIZE)
         {
             state = DRAM_state::IDLE;
-            command_done.push(true);
         }
+        command_done.push(true);
     }
 
     void process_write_stream()
@@ -78,11 +87,12 @@ active_component DRAM_channel
         storage[address] = value;
         address++;
 
+        stream_count++;
         if (stream_count == DRAM_STREAM_SIZE)
         {
             state = DRAM_state::IDLE;
-            command_done.push(true);
         }
+        command_done.push(true);
     }
 
     void check_for_new_command()

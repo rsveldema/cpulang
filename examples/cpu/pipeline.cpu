@@ -1,0 +1,24 @@
+
+enum instruction_kind
+{
+    NOP,
+    ADD
+};
+
+
+ACTIVE_COMPONENT(MMU){
+
+};
+
+
+
+entity instruction
+{
+    instruction_kind type;
+};
+
+
+ACTIVE_COMPONENT(instruction_fetcher ) {};
+ACTIVE_COMPONENT(instruction_decoder ) {};
+ACTIVE_COMPONENT(instruction_executor) {};
+ACTIVE_COMPONENT(instruction_store   ) {};

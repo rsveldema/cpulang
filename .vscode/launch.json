@@ -8,11 +8,11 @@
             "scriptPath": "${workspaceFolder}/<...>.cmake"
         },
         {
-            "name": "C/C++: g++ build and debug active file",
+            "name": "run tester",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/${fileBasenameNoExtension}",
-            "args": [],
+            "program": "${workspaceRoot}/build/tests/tester",
+            "args": ["--gtest_filter=*TestReadBurst"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
@@ -30,7 +30,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "C/C++: g++ build active file",
+            "preLaunchTask": "build using cmake",
             "miDebuggerPath": "/usr/bin/gdb"
         }
     ],

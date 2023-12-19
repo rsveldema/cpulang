@@ -1,8 +1,11 @@
+#pragma once
+
 #include <cpp.hpp>
 
-#include <MemoryControllerSingle.cpu>
+#include "MemoryControllerSingle.cpu"
 
-active_component MemoryControllerDispatcher
+
+ACTIVE_COMPONENT(MemoryControllerDispatcher)
 {
     enum memory_controller_dispatcher_t
     {
@@ -15,20 +18,20 @@ active_component MemoryControllerDispatcher
 
     memory_controller_dispatcher_t m_state = memory_controller_dispatcher_t::IDLE;
 
-    wire<bool> DRAM_A_cmd_set;
-    wire<DRAM_command_type> DRAM_A_cmd_type;
-    wire<uint64_t> DRAM_A_cmd_addr;
-    wire<bool> DRAM_A_cmd_done;
-    wire<uint32_t> DRAM_A_cmd_value;
+    Wire<bool> subcontroller_A_cmd_set;
+    Wire<DRAM_command_type> subcontroller_A_cmd_type;
+    Wire<uint64_t> subcontroller_A_cmd_addr;
+    Wire<bool> subcontroller_A_cmd_done;
+    Wire<uint32_t> subcontroller_A_cmd_value; // each clk a new value is set
 
-    wire<bool> DRAM_B_cmd_set;
-    wire<DRAM_command_type> DRAM_B_cmd_type;
-    wire<uint64_t> DRAM_B_cmd_addr;
-    wire<bool> DRAM_B_cmd_done;
-    wire<uint32_t> DRAM_B_cmd_value;
+    Wire<bool> subcontroller_B_cmd_set;
+    Wire<DRAM_command_type> subcontroller_B_cmd_type;
+    Wire<uint64_t> subcontroller_B_cmd_addr;
+    Wire<bool> subcontroller_B_cmd_done;
+    Wire<uint32_t> subcontroller_B_cmd_value; // each clk a new value is set
 
-    MemoryControllerSingle DRAM_A {DRAM_A_cmd_type, DRAM_A_cmd_set, DRAM_A_cmd_addr, DRAM_A_cmd_done, DRAM_A_cmd_value};
-    MemoryControllerSingle DRAM_B {DRAM_B_cmd_type, DRAM_B_cmd_set, DRAM_B_cmd_addr, DRAM_B_cmd_done, DRAM_B_cmd_value};
+    MemoryControllerSingle subcontroller_A {subcontroller_A_cmd_type, subcontroller_A_cmd_set, subcontroller_A_cmd_addr, subcontroller_A_cmd_done, subcontroller_A_cmd_value};
+    MemoryControllerSingle subcontroller_B {subcontroller_B_cmd_type, subcontroller_B_cmd_set, subcontroller_B_cmd_addr, subcontroller_B_cmd_done, subcontroller_B_cmd_value};
 
     in_buffer<bool> m_command_set;
     in_buffer<DRAM_command_type> m_command_type;
@@ -38,12 +41,12 @@ active_component MemoryControllerDispatcher
     inout_buffer<MemoryPacket> m_command_rw;
 
     MemoryControllerDispatcher(
-        wire<bool> & command_set,
-        wire<DRAM_command_type> & command_type,
-        wire<uint64_t> & command_address,
+        Wire<bool> & command_set,
+        Wire<DRAM_command_type> & command_type,
+        Wire<uint64_t> & command_address,
 
-        wire<bool> & command_done,
-        wire<MemoryPacket> & command_rw)
+        Wire<bool> & command_done,
+        Wire<MemoryPacket> & command_rw)
         : m_command_set(command_set),
           m_command_type(command_type),
           m_command_address(command_address),
@@ -60,15 +63,19 @@ active_component MemoryControllerDispatcher
             check_for_new_command();
             break;
         case memory_controller_dispatcher_t::ACTIVE_A_READ:
+            subcontroller_A.set_idle_cmd();
             check_for_read_completion_A();
             break;
         case memory_controller_dispatcher_t::ACTIVE_B_READ:
+            subcontroller_B.set_idle_cmd();
             check_for_read_completion_B();
             break;
         case memory_controller_dispatcher_t::ACTIVE_A_WRITE:
+            subcontroller_A.set_idle_cmd();
             check_for_write_completion_A();
             break;
         case memory_controller_dispatcher_t::ACTIVE_B_WRITE:
+            subcontroller_B.set_idle_cmd();
             check_for_write_completion_B();
             break;
         }
@@ -76,7 +83,7 @@ active_component MemoryControllerDispatcher
 
     void check_for_read_completion_A()
     {
-        const auto ret = DRAM_A.check_read_finished();
+        const auto ret = subcontroller_A.check_read_finished();
         if (ret.available)
         {
             m_state = memory_controller_dispatcher_t::IDLE;
@@ -87,7 +94,7 @@ active_component MemoryControllerDispatcher
 
     void check_for_read_completion_B()
     {
-        const auto ret = DRAM_B.check_read_finished();
+        const auto ret = subcontroller_B.check_read_finished();
         if (ret.available)
         {
             m_state = memory_controller_dispatcher_t::IDLE;
@@ -98,7 +105,7 @@ active_component MemoryControllerDispatcher
 
     void check_for_write_completion_A()
     {
-        if (DRAM_A.check_write_finished())
+        if (subcontroller_A.check_write_finished())
         {
             m_state = memory_controller_dispatcher_t::IDLE;
             m_command_done.push(true);
@@ -107,7 +114,7 @@ active_component MemoryControllerDispatcher
 
     void check_for_write_completion_B()
     {
-        if (DRAM_B.check_write_finished())
+        if (subcontroller_B.check_write_finished())
         {
             m_state = memory_controller_dispatcher_t::IDLE;
             m_command_done.push(true);
@@ -129,14 +136,14 @@ active_component MemoryControllerDispatcher
         {
             if (is_for_A(address))
             {
-                if (DRAM_A.try_request_read(m_command_address.value()))
+                if (subcontroller_A.try_request_read(m_command_address.value()))
                 {
                     m_state = memory_controller_dispatcher_t::ACTIVE_A_READ;
                 }
             }
             else
             {
-                if (DRAM_B.try_request_read(m_command_address.value()))
+                if (subcontroller_B.try_request_read(m_command_address.value()))
                 {
                     m_state = memory_controller_dispatcher_t::ACTIVE_B_READ;
                 }
@@ -148,14 +155,14 @@ active_component MemoryControllerDispatcher
         {
             if (is_for_A(address))
             {
-                if (DRAM_A.try_request_write(m_command_address.value(), m_command_rw.value()))
+                if (subcontroller_A.try_request_write(m_command_address.value(), m_command_rw.value()))
                 {
                     m_state = memory_controller_dispatcher_t::ACTIVE_A_WRITE;
                 }
             }
             else
             {
-                if (DRAM_B.try_request_write(m_command_address.value(), m_command_rw.value()))
+                if (subcontroller_B.try_request_write(m_command_address.value(), m_command_rw.value()))
                 {
                     m_state = memory_controller_dispatcher_t::ACTIVE_B_WRITE;
                 }
