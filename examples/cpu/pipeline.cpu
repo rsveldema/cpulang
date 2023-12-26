@@ -1,24 +1,8 @@
 
-enum instruction_kind
-{
-    NOP,
-    ADD
-};
+#include "instruction_kind_t.cpu"
 
+entity instruction { instruction_kind_t type; };
 
-ACTIVE_COMPONENT(MMU){
-
-};
-
-
-
-entity instruction
-{
-    instruction_kind type;
-};
-
-
-ACTIVE_COMPONENT(instruction_fetcher ) {};
-ACTIVE_COMPONENT(instruction_decoder ) {};
-ACTIVE_COMPONENT(instruction_executor) {};
-ACTIVE_COMPONENT(instruction_store   ) {};
+ACTIVE_COMPONENT(InstructionDecoder){void tick(){}};
+ACTIVE_COMPONENT(InstructionExecutor){void tick(){}};
+ACTIVE_COMPONENT(InstructionStore){void tick(){}};

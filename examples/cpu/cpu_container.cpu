@@ -1,25 +1,28 @@
 #include "cpp.hpp"
 
 constexpr uint32_t PAGE_SIZE_SHIFT = 12;
-constexpr uint32_t PAGE_SIZE = 1 << PAGE_SIZE_SHIFT;
+constexpr uint32_t PAGE_SIZE       = 1 << PAGE_SIZE_SHIFT;
 
 #include "DDR5.cpu"
 #include "MemoryControllerDispatcher.cpu"
 #include "cache.cpu"
 #include "pipeline.cpu"
+#include "MMU.cpu"
+#include "InstructionFetcher.cpu"
 
 cpu cpu_container
 {
-  Wire<bool> mem_controller_command_set;
+  Wire<bool>              mem_controller_command_set;
   Wire<DRAM_command_type> mem_controller_command_type;
-  Wire<uint64_t> mem_controller_command_address;
-  Wire<bool> mem_controller_command_done;
-  Wire<MemoryPacket> mem_controller_command_rw;
+  Wire<uint64_t>          mem_controller_command_address;
+  Wire<bool>              mem_controller_command_done;
+  Wire<MemoryPacket>      mem_controller_command_rw;
 
-  MemoryControllerDispatcher memory_dispatcher{
-      mem_controller_command_set, mem_controller_command_type,
-      mem_controller_command_address, mem_controller_command_done,
-      mem_controller_command_rw};
+  MemoryControllerDispatcher memory_dispatcher{mem_controller_command_set,
+                                               mem_controller_command_type,
+                                               mem_controller_command_address,
+                                               mem_controller_command_done,
+                                               mem_controller_command_rw};
 
   DRAM_channel DRAM_A{memory_dispatcher.subcontroller_A_cmd_set,
                       memory_dispatcher.subcontroller_A_cmd_type,
@@ -32,4 +35,14 @@ cpu cpu_container
                       memory_dispatcher.subcontroller_B_cmd_addr,
                       memory_dispatcher.subcontroller_B_cmd_done,
                       memory_dispatcher.subcontroller_B_cmd_value};
+
+  L1_data_cache l1d_cache;
+  L1_insn_cache l1i_cache;
+
+  MMU mmu;
+
+  InstructionFetcher  fetcher;
+  InstructionDecoder  decoder;
+  InstructionExecutor executor;
+  InstructionStore    storer;
 };

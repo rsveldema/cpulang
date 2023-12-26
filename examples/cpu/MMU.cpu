@@ -1,0 +1,111 @@
+#pragma once
+
+#include <cpp.hpp>
+
+#include "cache.cpu"
+#include "config.cpu"
+
+enum MMU_Request_State
+{
+  IDLE,
+  WAIT
+};
+
+entity MMU_CoreInfo
+{
+  in_buffer<bool>     m_requested_set;
+  in_buffer<uint64_t> m_requested_address;
+
+  out_buffer<bool>    m_req_done;
+  out_buffer<uint64_t> m_req_value;
+
+  uint64_t core_base_address;
+
+  MMU_CoreInfo()
+  {}
+};
+
+ACTIVE_COMPONENT(MMU)
+{
+  MMU_Request_State m_state;
+  MMU_CoreInfo      m_core_req[NUM_CORES];
+
+  out_buffer<bool>     m_req_cache_set;
+  out_buffer<uint64_t> m_req_cache_address;
+  in_buffer<bool>      m_req_done;
+  in_buffer<uint64_t>  m_req_value;
+
+  MMU(Wire<uint64_t> & req_address) {}
+
+  uint32_t m_current_core = 0;
+
+  bool check_for_new_request(uint16_t i)
+  {
+    if (m_core_req[i].m_requested_set.value())
+      {
+        uint64_t req_address = m_core_req[i].m_requested_address.value();
+
+        uint32_t base_address = m_core_req[i].core_base_address;
+
+        uint64_t phys_address = base_address + req_address;
+
+        m_req_cache_address.push(phys_address);
+        m_req_cache_set.push(true);
+
+        m_state = MMU_Request_State::WAIT;
+        return true;
+      }
+      return false;
+  }
+
+  bool check_for_req_done(uint16_t i)
+  {
+    if (m_req_done.value())
+    {
+        uint64_t value = m_req_value.value();
+
+        m_core_req[i].m_req_value.push(value);
+        m_core_req[i].m_req_done.push(true);
+
+        m_state = MMU_Request_State::IDLE;
+    }
+  }
+
+  bool handle_core_request(uint16_t i)
+  {
+    switch (m_state)
+      {
+        case MMU_Request_State::IDLE: {
+          if (check_for_new_request(i))
+          {
+            return true;
+          }
+          break;
+        }
+
+        case MMU_Request_State::WAIT: {
+            if (check_for_req_done(i))
+            {
+                return true;
+            }
+        }
+      }
+      return false;
+  }
+
+  void tick()
+  {
+    for (uint16_t i = 0; i < NUM_CORES; i++)
+      {
+        if (handle_core_request(m_current_core))
+        {
+            return;
+        }
+
+        m_current_core += 1;
+        if (m_current_core == NUM_CORES) {
+            m_current_core = 0;
+        }
+      }
+  }
+};

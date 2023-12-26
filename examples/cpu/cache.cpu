@@ -1,13 +1,25 @@
 #include <cpp.hpp>
 
 
+entity CacheBlock
+{
+    uint64_t address;
+    uint32_t cache_blk[DRAM_STREAM_SIZE];
+};
+
+
 ACTIVE_COMPONENT(L1_insn_cache)
 {
+    CacheBlock storage[1024 * 16];
+
     void tick() {
     }
 };
 
 ACTIVE_COMPONENT(L1_data_cache) {
+
+    CacheBlock storage[1024 * 16];
+
     void tick() {
     }
 };

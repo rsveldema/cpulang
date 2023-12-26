@@ -1,0 +1,10 @@
+#pragma once
+#include <cpp.hpp>
+#include "config.cpu"
+
+entity RegisterSet
+{
+    // holds register X1 - X31 (X0 = 0)
+    uint64_t regs[NUM_USER_REGS];
+    uint64_t process_base_address;
+};

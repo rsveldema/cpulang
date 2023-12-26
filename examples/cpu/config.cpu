@@ -1,0 +1,6 @@
+#pragma once
+
+
+constexpr uint32_t NUM_USER_REGS = 32u;
+constexpr uint32_t NUM_CORES = 1u;
+constexpr uint32_t DRAM_STREAM_SIZE = 8;

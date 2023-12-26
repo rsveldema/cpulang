@@ -1,0 +1,31 @@
+#pragma once
+#include "cpp.hpp"
+
+enum InsnFetchState
+{
+  IDLE,
+  WAITING
+};
+
+ACTIVE_COMPONENT(InstructionFetcher)
+{
+  uint64_t             address = 0;
+  out_buffer<uint64_t> requested_address;
+  in_buffer<bool>      received_available;
+  in_buffer<uint64_t>  received_value;
+  InsnFetchState       m_state = InsnFetchState::IDLE;
+
+  void tick()
+  {
+    switch (m_state)
+      {
+        case InsnFetchState::IDLE: {
+          requested_address.push(address);
+          m_state = InsnFetchState::WAITING;
+          break;
+        }
+      }
+
+    uint32_t raw_insn = 0;
+  }
+};

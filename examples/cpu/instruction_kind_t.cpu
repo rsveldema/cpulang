@@ -1,0 +1,8 @@
+#pragma once
+
+enum instruction_kind_t
+{
+  NOP,
+  ADD
+};
+
