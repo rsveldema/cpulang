@@ -1,0 +1,73 @@
+
+
+program: decl*
+
+decl: preprocessor_stmt
+    | constexpr_stmt
+    | enum_stmt
+    | active_component
+    | passive_component
+
+
+constexpr_stmt: CONSTEXPR type identifier "=" expr ";"
+
+type: basic_type
+    | identifier
+    | "Wire" "<" type ">"
+    | "array" "<" type "," expr ">"
+
+basic_type: "void"
+    | "bool"
+    | "uint8_t"
+    | "uint16_t"
+    | "uint32_t"
+    | "uint64_t"
+
+expr: term (operator term)?
+
+operator: "+" | "-" | "*" | "/" | "<<" | ">>" | "."
+
+term: number
+    | "(" term ")"
+    | identifier   ("[" expr  "]")?
+
+number: SIGNED_NUMBER
+
+
+preprocessor_stmt: pragma_stmt
+    | include_stmt
+
+pragma_stmt: PRAGMA identifier
+
+include_stmt: INCLUDE ( "<" identifier "." identifier ">" | string)
+
+enum_stmt: "enum" identifier "{" "}"
+
+passive_component: PASSIVE_COMPONENT "(" identifier ")" component_body ";"
+active_component:  ACTIVE_COMPONENT  "(" identifier ")" component_body ";"
+
+component_body: "{" component_decl* "}"
+
+component_decl: type identifier (params block_stmt | var_init? ";" )?
+
+var_init: "{" expr ("," expr )* "}"
+
+params: "(" ")"
+
+block_stmt: "{" "}"
+
+
+CONSTEXPR: "constexpr"
+PRAGMA: /#pragma/
+INCLUDE: /#include/
+
+PASSIVE_COMPONENT: "PASSIVE_COMPONENT"
+ACTIVE_COMPONENT: "ACTIVE_COMPONENT"
+
+identifier:  /[_a-zA-Z][_a-zA-Z0-9]*/
+
+string: ESCAPED_STRING
+%import common.ESCAPED_STRING
+%import common.SIGNED_NUMBER
+%import common.WS
+%ignore WS

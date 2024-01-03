@@ -18,9 +18,11 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 
-
 add_library(cpulang lib.cpp)
 target_include_directories(cpulang PUBLIC examples/cpu inc)
 
-
 add_subdirectory(tests)
+
+
+add_custom_target(cpulang.v
+  COMMAND python compiler.py examples/cpu)

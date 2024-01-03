@@ -57,5 +57,5 @@ PASSIVE_COMPONENT(cpu_container)
       mmu_req_value
    };
 
-   Core cores[NUM_CORES];
+   array<Core, NUM_CORES> cores;
 };

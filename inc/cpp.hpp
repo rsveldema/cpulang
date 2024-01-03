@@ -4,6 +4,10 @@
 #include <assert.h>
 #include <stdint.h>
 #include <vector>
+#include <array>
+
+template<typename T, uint32_t S>
+using array = std::array<T,S>;
 
 struct ActiveComponent
 {

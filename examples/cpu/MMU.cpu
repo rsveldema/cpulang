@@ -42,6 +42,8 @@ ACTIVE_COMPONENT(MMU)
    in_buffer<bool>      m_req_done;
    in_buffer<uint64_t>  m_req_value;
 
+   uint32_t m_current_core = 0;
+
    MMU(
        Wire<bool> & core0_requested_set,
        Wire<uint64_t> & core0_requested_address,
@@ -52,19 +54,16 @@ ACTIVE_COMPONENT(MMU)
        Wire<uint64_t> & req_cache_address,
        Wire<bool> & req_done,
        Wire<uint64_t> & req_value)
-       : m_core_req {{
-           core0_requested_set,
+       : m_core_req { { core0_requested_set,
            core0_requested_address,
            core0_req_done,
-           core0_req_value}},
-       m_req_cache_set(req_cache_set)
+           core0_req_value } }
+       , m_req_cache_set(req_cache_set)
        , m_req_cache_address(req_cache_address)
        , m_req_done(req_done)
        , m_req_value(req_value)
    {
    }
-
-   uint32_t m_current_core = 0;
 
    bool check_for_new_request(uint16_t i)
    {
@@ -97,7 +96,7 @@ ACTIVE_COMPONENT(MMU)
             m_state = MMU_Request_State::IDLE;
             return true;
          }
-        return false;
+      return false;
    }
 
    bool handle_core_request(uint16_t i)
