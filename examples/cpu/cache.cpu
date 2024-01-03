@@ -5,13 +5,13 @@
 PASSIVE_COMPONENT(CacheBlock)
 {
     uint64_t address;
-    uint32_t cache_blk[DRAM_STREAM_SIZE];
+    array<uint32_t, DRAM_STREAM_SIZE> cache_blk;
 };
 
 
 ACTIVE_COMPONENT(L1_insn_cache)
 {
-    CacheBlock storage[1024 * 16];
+    array<CacheBlock, 1024*16>  storage;
 
     void tick() {
     }
@@ -19,7 +19,7 @@ ACTIVE_COMPONENT(L1_insn_cache)
 
 ACTIVE_COMPONENT(L1_data_cache) {
 
-    CacheBlock storage[1024 * 16];
+    array<CacheBlock, 1024*16>  storage;
 
     void tick() {
     }

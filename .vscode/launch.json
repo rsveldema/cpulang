@@ -1,6 +1,15 @@
 {
     "configurations": [
         {
+            "name": "Python: Compiler",
+            "type": "python",
+            "request": "launch",
+            "program": "compiler.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["examples/cpu", "cpu_container.cpu"]
+        },
+        {
             "type": "cmake",
             "request": "launch",
             "name": "CMake: Script debugging",
@@ -12,7 +21,9 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceRoot}/build/tests/tester",
-            "args": ["--gtest_filter=*TestReadBurst"],
+            "args": [
+                "--gtest_filter=*TestReadBurst"
+            ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

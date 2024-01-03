@@ -41,9 +41,9 @@ ACTIVE_COMPONENT(DRAM_channel)
     // the value read / write
     inout_buffer<uint32_t> command_value;
 
-    uint32_t storage[1024 * 1024];
+    array<uint32_t, 1024*1024>  storage;
 
-    DRAM_channel(Wire<bool> & cmd_set,
+    CTOR DRAM_channel(Wire<bool> & cmd_set,
                  Wire<DRAM_command_type> & cmd_type,
                  Wire<uint64_t>& cmd_addr,
                  Wire<bool>& cmd_done,
@@ -60,26 +60,29 @@ ACTIVE_COMPONENT(DRAM_channel)
     {
         switch (state)
         {
-        case DRAM_state::IDLE:
+        case DRAM_state::IDLE: {
             check_for_new_command();
             break;
-        case DRAM_state::STREAM_READ:
+        }
+        case DRAM_state::STREAM_READ: {
             process_read_stream();
             break;
-        case DRAM_state::STREAM_WRITE:
+        }
+        case DRAM_state::STREAM_WRITE: {
             process_write_stream();
             break;
+        }
         }
     }
 
     void process_read_stream()
     {
         uint32_t value = storage[address];
-        address++;
+        address = address + 1;
         command_value.push(value);
         printf("DDR4-push: %d\n", value);
 
-        stream_count++;
+        stream_count = stream_count + 1;
         if (stream_count == DRAM_STREAM_SIZE)
         {
             state = DRAM_state::IDLE;
@@ -91,9 +94,9 @@ ACTIVE_COMPONENT(DRAM_channel)
     {
         uint32_t value = command_value.value();
         storage[address] = value;
-        address++;
+        address = address + 1;
 
-        stream_count++;
+        stream_count = stream_count + 1;
         if (stream_count == DRAM_STREAM_SIZE)
         {
             state = DRAM_state::IDLE;
@@ -109,13 +112,15 @@ ACTIVE_COMPONENT(DRAM_channel)
         }
         switch (command_type.value())
         {
-        case DRAM_command_type::READ32:
+        case DRAM_command_type::READ32: {
             start_read_streaming();
             break;
+        }
 
-        case DRAM_command_type::WRITE32:
+        case DRAM_command_type::WRITE32: {
             start_write_streaming();
             break;
+        }
         }
     }
 

@@ -11,9 +11,14 @@ decl: preprocessor_stmt
 
 constexpr_stmt: CONSTEXPR type identifier "=" expr ";"
 
-type: basic_type
+type: ref_type ("&")?
+
+ref_type: basic_type
     | identifier
     | "Wire" "<" type ">"
+    | "in_buffer" "<" type ">"
+    | "out_buffer" "<" type ">"
+    | "inout_buffer" "<" type ">"
     | "array" "<" type "," expr ">"
 
 basic_type: "void"
@@ -25,11 +30,15 @@ basic_type: "void"
 
 expr: term (operator term)?
 
-operator: "+" | "-" | "*" | "/" | "<<" | ">>" | "."
+operator: "+" | "-" | "*" | "/" | "<<" | ">>" | "." | "==" | "!="
 
 term: number
+    | string
     | "(" term ")"
-    | identifier   ("[" expr  "]")?
+    | "!" term
+    | compound_identifier   (args)?
+
+compound_identifier: identifier ("::" identifier)? ("." identifier)? ("[" expr  "]")?
 
 number: SIGNED_NUMBER
 
@@ -39,22 +48,56 @@ preprocessor_stmt: pragma_stmt
 
 pragma_stmt: PRAGMA identifier
 
-include_stmt: INCLUDE ( "<" identifier "." identifier ">" | string)
+include_stmt: INCLUDE ( inc_file_spec  | string)
+inc_file_spec: "<" identifier "." identifier ">"
 
-enum_stmt: "enum" identifier "{" "}"
+enum_stmt: "enum" identifier "{" identifier ("," identifier )* "}" ";"
 
 passive_component: PASSIVE_COMPONENT "(" identifier ")" component_body ";"
+
 active_component:  ACTIVE_COMPONENT  "(" identifier ")" component_body ";"
 
-component_body: "{" component_decl* "}"
+component_body: "{" (ctor | component_decl)* "}"
+
+ctor: "CTOR" identifier params ctor_init_list? block_stmt
+
+ctor_init_list: ":" ctor_init ("," ctor_init)*
+
+ctor_init: identifier ( "(" identifier ")" | ctor_init_blk )
+
+ctor_init_blk: "{" ( ctor_init_blk  | identifier ("," identifier)*) "}"
 
 component_decl: type identifier (params block_stmt | var_init? ";" )?
 
 var_init: "{" expr ("," expr )* "}"
 
-params: "(" ")"
+params: "(" (param ("," param)*)? ")"
 
-block_stmt: "{" "}"
+param: type  identifier
+
+
+block_stmt: "{" stmt* "}"
+
+stmt: switch_stmt | if_stmt | call_or_assign | break_stmt | continue_stmt | decl_stmt | return_stmt
+
+return_stmt: "return" (expr)? ";"
+
+decl_stmt: type identifier "=" expr ";"
+
+break_stmt: "break" ";"
+
+continue_stmt: "continue" ";"
+
+call_or_assign: compound_identifier ("=" expr | args) ";"
+
+args: "(" (expr ("," expr)*)? ")"
+
+switch_stmt: "switch" "(" expr ")" "{" case_stmt* "}"
+
+case_stmt: "case" expr ":" block_stmt
+    | "default" ":" block_stmt
+
+if_stmt: "if" "(" expr ")" block_stmt ("else" block_stmt)?
 
 
 CONSTEXPR: "constexpr"
@@ -66,8 +109,16 @@ ACTIVE_COMPONENT: "ACTIVE_COMPONENT"
 
 identifier:  /[_a-zA-Z][_a-zA-Z0-9]*/
 
+MULTILINE_COMMENT: /\/\*(\*(?!\/)|[^*])*\*\//
+SINGLELINE_COMMENT: "//" /[^\n]*/ NEWLINE
+NEWLINE: "\n"
+
+
 string: ESCAPED_STRING
 %import common.ESCAPED_STRING
 %import common.SIGNED_NUMBER
 %import common.WS
 %ignore WS
+%ignore MULTILINE_COMMENT
+%ignore SINGLELINE_COMMENT
+%ignore NEWLINE

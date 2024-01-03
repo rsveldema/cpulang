@@ -9,6 +9,9 @@
 template<typename T, uint32_t S>
 using array = std::array<T,S>;
 
+// for easier parsing of the C++ code
+#define CTOR
+
 struct ActiveComponent
 {
   ActiveComponent() { s_components.push_back(this); }

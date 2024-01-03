@@ -20,7 +20,7 @@ PASSIVE_COMPONENT(MMU_CoreInfo)
 
    uint64_t core_base_address;
 
-   MMU_CoreInfo(Wire<bool> & requested_set,
+   CTOR MMU_CoreInfo(Wire<bool> & requested_set,
        Wire<uint64_t> & requested_address,
        Wire<bool> & req_done,
        Wire<uint64_t> & req_value)
@@ -34,17 +34,17 @@ PASSIVE_COMPONENT(MMU_CoreInfo)
 
 ACTIVE_COMPONENT(MMU)
 {
-   MMU_Request_State m_state;
-   MMU_CoreInfo      m_core_req[NUM_CORES];
+   MMU_Request_State              m_state;
+   array<MMU_CoreInfo, NUM_CORES> m_core_req;
 
    out_buffer<bool>     m_req_cache_set;
    out_buffer<uint64_t> m_req_cache_address;
    in_buffer<bool>      m_req_done;
    in_buffer<uint64_t>  m_req_value;
 
-   uint32_t m_current_core = 0;
+   uint32_t m_current_core;
 
-   MMU(
+   CTOR MMU(
        Wire<bool> & core0_requested_set,
        Wire<uint64_t> & core0_requested_address,
        Wire<bool> & core0_req_done,
@@ -54,15 +54,16 @@ ACTIVE_COMPONENT(MMU)
        Wire<uint64_t> & req_cache_address,
        Wire<bool> & req_done,
        Wire<uint64_t> & req_value)
-       : m_core_req { { core0_requested_set,
+       : m_core_req { { { core0_requested_set,
            core0_requested_address,
            core0_req_done,
-           core0_req_value } }
+           core0_req_value } } }
        , m_req_cache_set(req_cache_set)
        , m_req_cache_address(req_cache_address)
        , m_req_done(req_done)
        , m_req_value(req_value)
    {
+      m_current_core = 0;
    }
 
    bool check_for_new_request(uint16_t i)
