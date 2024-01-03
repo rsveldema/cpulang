@@ -3,29 +3,40 @@
 
 enum InsnFetchState
 {
-  IDLE,
-  WAITING
+   IDLE,
+   WAITING
 };
 
 ACTIVE_COMPONENT(InstructionFetcher)
 {
-  uint64_t             address = 0;
-  out_buffer<uint64_t> requested_address;
-  in_buffer<bool>      received_available;
-  in_buffer<uint64_t>  received_value;
-  InsnFetchState       m_state = InsnFetchState::IDLE;
+   InsnFetchState m_state   = InsnFetchState::IDLE;
+   uint64_t       m_address = 0;
 
-  void tick()
-  {
-    switch (m_state)
-      {
-        case InsnFetchState::IDLE: {
-          requested_address.push(address);
-          m_state = InsnFetchState::WAITING;
-          break;
-        }
-      }
+   out_buffer<uint64_t> m_requested_address;
+   out_buffer<bool>     m_requested_address_set;
+   in_buffer<bool>      m_received_available;
+   in_buffer<uint64_t>  m_received_value;
 
-    uint32_t raw_insn = 0;
-  }
+   InstructionFetcher(Wire<uint64_t> & requested_address, Wire<bool> & requested_address_set, Wire<bool> & received_available, Wire<uint64_t> & received_value)
+       : m_requested_address(requested_address)
+       , m_requested_address_set(requested_address_set)
+       , m_received_available(received_available)
+       , m_received_value(received_value)
+   {
+   }
+
+   void tick()
+   {
+      switch (m_state)
+         {
+            case InsnFetchState::IDLE: {
+               m_requested_address.push(m_address);
+               m_requested_address_set.push(true);
+               m_state = InsnFetchState::WAITING;
+               break;
+            }
+         }
+
+      uint32_t raw_insn = 0;
+   }
 };

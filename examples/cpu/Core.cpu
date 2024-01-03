@@ -1,0 +1,18 @@
+#pragma once
+#include <cpp.hpp>
+#include "InstructionFetcher.cpu"
+#include "pipeline.cpu"
+
+
+PASSIVE_COMPONENT(Core)
+{
+   Wire<bool>     core_requested_set;
+   Wire<uint64_t> core_requested_address;
+   Wire<bool>     core_req_done;
+   Wire<uint64_t> core_req_value;
+
+   InstructionFetcher  fetcher { core_requested_address, core_requested_set, core_requested_set, core_req_value  };
+   InstructionDecoder  decoder;
+   InstructionExecutor executor;
+   InstructionStore    storer;
+};

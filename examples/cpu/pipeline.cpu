@@ -1,8 +1,13 @@
+#pragma once
 
+#include "cpp.hpp"
 #include "instruction_kind_t.cpu"
 
-entity instruction { instruction_kind_t type; };
+PASSIVE_COMPONENT(instruction)
+{
+   instruction_kind_t type;
+};
 
-ACTIVE_COMPONENT(InstructionDecoder){void tick(){}};
-ACTIVE_COMPONENT(InstructionExecutor){void tick(){}};
-ACTIVE_COMPONENT(InstructionStore){void tick(){}};
+ACTIVE_COMPONENT(InstructionDecoder) { void tick() {} };
+ACTIVE_COMPONENT(InstructionExecutor) { void tick() {} };
+ACTIVE_COMPONENT(InstructionStore) { void tick() {} };

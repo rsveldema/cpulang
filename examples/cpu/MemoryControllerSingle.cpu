@@ -3,9 +3,9 @@
 #include "DDR5.cpu"
 #include <cpp.hpp>
 
-entity MemoryPacket { uint32_t data[DRAM_STREAM_SIZE]; };
+PASSIVE_COMPONENT(MemoryPacket) { uint32_t data[DRAM_STREAM_SIZE]; };
 
-passive_component MemoryControllerSingle
+PASSIVE_COMPONENT(MemoryControllerSingle)
 {
   enum memory_controller_state_t
   {

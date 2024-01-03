@@ -4,45 +4,58 @@ constexpr uint32_t PAGE_SIZE_SHIFT = 12;
 constexpr uint32_t PAGE_SIZE       = 1 << PAGE_SIZE_SHIFT;
 
 #include "DDR5.cpu"
+#include "InstructionFetcher.cpu"
+#include "MMU.cpu"
 #include "MemoryControllerDispatcher.cpu"
 #include "cache.cpu"
 #include "pipeline.cpu"
-#include "MMU.cpu"
-#include "InstructionFetcher.cpu"
+#include "Core.cpu"
 
-cpu cpu_container
+PASSIVE_COMPONENT(cpu_container)
 {
-  Wire<bool>              mem_controller_command_set;
-  Wire<DRAM_command_type> mem_controller_command_type;
-  Wire<uint64_t>          mem_controller_command_address;
-  Wire<bool>              mem_controller_command_done;
-  Wire<MemoryPacket>      mem_controller_command_rw;
+   Wire<bool>              mem_controller_command_set;
+   Wire<DRAM_command_type> mem_controller_command_type;
+   Wire<uint64_t>          mem_controller_command_address;
+   Wire<bool>              mem_controller_command_done;
+   Wire<MemoryPacket>      mem_controller_command_rw;
 
-  MemoryControllerDispatcher memory_dispatcher{mem_controller_command_set,
-                                               mem_controller_command_type,
-                                               mem_controller_command_address,
-                                               mem_controller_command_done,
-                                               mem_controller_command_rw};
+   MemoryControllerDispatcher memory_dispatcher { mem_controller_command_set,
+      mem_controller_command_type,
+      mem_controller_command_address,
+      mem_controller_command_done,
+      mem_controller_command_rw };
 
-  DRAM_channel DRAM_A{memory_dispatcher.subcontroller_A_cmd_set,
-                      memory_dispatcher.subcontroller_A_cmd_type,
-                      memory_dispatcher.subcontroller_A_cmd_addr,
-                      memory_dispatcher.subcontroller_A_cmd_done,
-                      memory_dispatcher.subcontroller_A_cmd_value};
+   DRAM_channel DRAM_A { memory_dispatcher.subcontroller_A_cmd_set,
+      memory_dispatcher.subcontroller_A_cmd_type,
+      memory_dispatcher.subcontroller_A_cmd_addr,
+      memory_dispatcher.subcontroller_A_cmd_done,
+      memory_dispatcher.subcontroller_A_cmd_value };
 
-  DRAM_channel DRAM_B{memory_dispatcher.subcontroller_B_cmd_set,
-                      memory_dispatcher.subcontroller_B_cmd_type,
-                      memory_dispatcher.subcontroller_B_cmd_addr,
-                      memory_dispatcher.subcontroller_B_cmd_done,
-                      memory_dispatcher.subcontroller_B_cmd_value};
+   DRAM_channel DRAM_B { memory_dispatcher.subcontroller_B_cmd_set,
+      memory_dispatcher.subcontroller_B_cmd_type,
+      memory_dispatcher.subcontroller_B_cmd_addr,
+      memory_dispatcher.subcontroller_B_cmd_done,
+      memory_dispatcher.subcontroller_B_cmd_value };
 
-  L1_data_cache l1d_cache;
-  L1_insn_cache l1i_cache;
+   Wire<bool>     mmu_req_cache_set;
+   Wire<uint64_t> mmu_req_cache_address;
+   Wire<bool>     mmu_req_done;
+   Wire<uint64_t> mmu_req_value;
 
-  MMU mmu;
+   L1_data_cache l1d_cache;
+   L1_insn_cache l1i_cache;
 
-  InstructionFetcher  fetcher;
-  InstructionDecoder  decoder;
-  InstructionExecutor executor;
-  InstructionStore    storer;
+   MMU mmu {
+      cores[0].core_requested_set,
+      cores[0].core_requested_address,
+      cores[0].core_req_done,
+      cores[0].core_req_value,
+
+      mmu_req_cache_set,
+      mmu_req_cache_address,
+      mmu_req_done,
+      mmu_req_value
+   };
+
+   Core cores[NUM_CORES];
 };

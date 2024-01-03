@@ -19,9 +19,7 @@ struct ActiveComponent
 void tick_all_active_components();
 
 #define ACTIVE_COMPONENT(NAME) struct NAME : public ActiveComponent
-#define passive_component struct
-#define entity struct
-#define cpu struct
+#define PASSIVE_COMPONENT(NAME) struct NAME
 
 #define enum enum class
 

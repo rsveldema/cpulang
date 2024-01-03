@@ -7,105 +7,135 @@
 
 enum MMU_Request_State
 {
-  IDLE,
-  WAIT
+   IDLE,
+   WAIT
 };
 
-entity MMU_CoreInfo
+PASSIVE_COMPONENT(MMU_CoreInfo)
 {
-  in_buffer<bool>     m_requested_set;
-  in_buffer<uint64_t> m_requested_address;
+   in_buffer<bool>      m_requested_set;
+   in_buffer<uint64_t>  m_requested_address;
+   out_buffer<bool>     m_req_done;
+   out_buffer<uint64_t> m_req_value;
 
-  out_buffer<bool>    m_req_done;
-  out_buffer<uint64_t> m_req_value;
+   uint64_t core_base_address;
 
-  uint64_t core_base_address;
-
-  MMU_CoreInfo()
-  {}
+   MMU_CoreInfo(Wire<bool> & requested_set,
+       Wire<uint64_t> & requested_address,
+       Wire<bool> & req_done,
+       Wire<uint64_t> & req_value)
+       : m_requested_set(requested_set)
+       , m_requested_address(requested_address)
+       , m_req_done(req_done)
+       , m_req_value(req_value)
+   {
+   }
 };
 
 ACTIVE_COMPONENT(MMU)
 {
-  MMU_Request_State m_state;
-  MMU_CoreInfo      m_core_req[NUM_CORES];
+   MMU_Request_State m_state;
+   MMU_CoreInfo      m_core_req[NUM_CORES];
 
-  out_buffer<bool>     m_req_cache_set;
-  out_buffer<uint64_t> m_req_cache_address;
-  in_buffer<bool>      m_req_done;
-  in_buffer<uint64_t>  m_req_value;
+   out_buffer<bool>     m_req_cache_set;
+   out_buffer<uint64_t> m_req_cache_address;
+   in_buffer<bool>      m_req_done;
+   in_buffer<uint64_t>  m_req_value;
 
-  MMU(Wire<uint64_t> & req_address) {}
+   MMU(
+       Wire<bool> & core0_requested_set,
+       Wire<uint64_t> & core0_requested_address,
+       Wire<bool> & core0_req_done,
+       Wire<uint64_t> & core0_req_value,
 
-  uint32_t m_current_core = 0;
+       Wire<bool> & req_cache_set,
+       Wire<uint64_t> & req_cache_address,
+       Wire<bool> & req_done,
+       Wire<uint64_t> & req_value)
+       : m_core_req {{
+           core0_requested_set,
+           core0_requested_address,
+           core0_req_done,
+           core0_req_value}},
+       m_req_cache_set(req_cache_set)
+       , m_req_cache_address(req_cache_address)
+       , m_req_done(req_done)
+       , m_req_value(req_value)
+   {
+   }
 
-  bool check_for_new_request(uint16_t i)
-  {
-    if (m_core_req[i].m_requested_set.value())
-      {
-        uint64_t req_address = m_core_req[i].m_requested_address.value();
+   uint32_t m_current_core = 0;
 
-        uint32_t base_address = m_core_req[i].core_base_address;
+   bool check_for_new_request(uint16_t i)
+   {
+      if (m_core_req[i].m_requested_set.value())
+         {
+            uint64_t req_address = m_core_req[i].m_requested_address.value();
 
-        uint64_t phys_address = base_address + req_address;
+            uint32_t base_address = m_core_req[i].core_base_address;
 
-        m_req_cache_address.push(phys_address);
-        m_req_cache_set.push(true);
+            uint64_t phys_address = base_address + req_address;
 
-        m_state = MMU_Request_State::WAIT;
-        return true;
-      }
-      return false;
-  }
+            m_req_cache_address.push(phys_address);
+            m_req_cache_set.push(true);
 
-  bool check_for_req_done(uint16_t i)
-  {
-    if (m_req_done.value())
-    {
-        uint64_t value = m_req_value.value();
-
-        m_core_req[i].m_req_value.push(value);
-        m_core_req[i].m_req_done.push(true);
-
-        m_state = MMU_Request_State::IDLE;
-    }
-  }
-
-  bool handle_core_request(uint16_t i)
-  {
-    switch (m_state)
-      {
-        case MMU_Request_State::IDLE: {
-          if (check_for_new_request(i))
-          {
+            m_state = MMU_Request_State::WAIT;
             return true;
-          }
-          break;
-        }
-
-        case MMU_Request_State::WAIT: {
-            if (check_for_req_done(i))
-            {
-                return true;
-            }
-        }
-      }
+         }
       return false;
-  }
+   }
 
-  void tick()
-  {
-    for (uint16_t i = 0; i < NUM_CORES; i++)
-      {
-        if (handle_core_request(m_current_core))
-        {
-            return;
-        }
+   bool check_for_req_done(uint16_t i)
+   {
+      if (m_req_done.value())
+         {
+            uint64_t value = m_req_value.value();
 
-        m_current_core += 1;
-        if (m_current_core == NUM_CORES) {
-            m_current_core = 0;
-        }
-      }
-  }
+            m_core_req[i].m_req_value.push(value);
+            m_core_req[i].m_req_done.push(true);
+
+            m_state = MMU_Request_State::IDLE;
+            return true;
+         }
+        return false;
+   }
+
+   bool handle_core_request(uint16_t i)
+   {
+      switch (m_state)
+         {
+            case MMU_Request_State::IDLE: {
+               if (check_for_new_request(i))
+                  {
+                     return true;
+                  }
+               break;
+            }
+
+            case MMU_Request_State::WAIT: {
+               if (check_for_req_done(i))
+                  {
+                     return true;
+                  }
+            }
+         }
+      return false;
+   }
+
+   void tick()
+   {
+      for (uint16_t i = 0; i < NUM_CORES; i++)
+         {
+            if (handle_core_request(m_current_core))
+               {
+                  return;
+               }
+
+            m_current_core += 1;
+            if (m_current_core == NUM_CORES)
+               {
+                  m_current_core = 0;
+               }
+         }
+   }
 };

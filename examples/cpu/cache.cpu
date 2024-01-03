@@ -1,7 +1,8 @@
+#pragma once
 #include <cpp.hpp>
 
 
-entity CacheBlock
+PASSIVE_COMPONENT(CacheBlock)
 {
     uint64_t address;
     uint32_t cache_blk[DRAM_STREAM_SIZE];
